@@ -2,8 +2,10 @@ mod list;
 
 use std::io::Write;
 
-static EXIT: i32 = -2;
-static RESTART: i32 = -1;
+enum LoopControl {
+    Exit,
+    Restart
+}
 
 /// Main entry point
 fn main() {
@@ -12,19 +14,32 @@ fn main() {
 
 /// Program loop
 fn program_loop() {
-    let words: Vec<&str> = list::get_word_list();
+    let words: &Vec<&str> = list::get_word_list();
     loop {
         println!("Welcome!");
         // Gets the number of words in the user's phrase
-        let phrase_count = get_word_count();
-        // If the user wants to exit, then exit
-        if phrase_count == EXIT {return;}
-        // Skip the rest of the loop if should restart
-        if phrase_count == RESTART {continue;}
+        let phrase_count: i32;
+        match get_word_count() {
+            Ok(count) => {
+                phrase_count = count;
+            },
+            Err(LoopControl::Restart) => {
+                continue;
+            },
+            Err(LoopControl::Exit) => {
+                return;
+            }
+        }
         // Gets the max number of words to display
-        let max_num_words = get_max_num_words();
-        // If should restart the loop, then restart
-        if max_num_words == RESTART {continue;}
+        let max_num_words: i32;
+        match get_max_num_words() {
+            Ok(count) => {
+                max_num_words = count;
+            },
+            Err(_) => {
+                continue;
+            },
+        }
 
         println!("In the following prompt you will be asked to type out your word. If there are missing letters in the word you wish to know, put a space in the place of the missing letter.");
 
@@ -100,39 +115,39 @@ fn get_user_words(phrase_count: i32) -> Vec<String> {
 }
 
 /// Gets the max number of words to display
-fn get_max_num_words() -> i32 {
+fn get_max_num_words() -> Result<i32, LoopControl> {
     match get_number_input("Please enter the max number of possible words to display: ") {
         Ok(count) => {
             if count < 1 {
                 println!("Max words must be greater than 0! Restarting!");
-                return RESTART;
+                return Err(LoopControl::Restart);
             }
-            count
+            Ok(count)
         },
         Err(_) => {
             println!("Bad max words count! Restarting!");
-            RESTART
+            Err(LoopControl::Restart)
         }
     }
 }
 
 /// Gets the number of words in the user's phrase
-fn get_word_count() -> i32 {
+fn get_word_count() -> Result<i32, LoopControl> {
     match get_number_input("How many words are in your phrase? (0 to exit): ") {
         Ok(count) => {
             if count == 0 {
-                return EXIT;
+                return Err(LoopControl::Exit);
             } 
             if count < 0 {
                 println!("Phrase count must be greater than 0! Restarting!");
-                return RESTART;
+                return Err(LoopControl::Restart);
             }
             println!("You have {} words in your phrase!", count);
-            count
+            Ok(count)
         },
         Err(_) => {
             println!("Bad phrase count! Restarting!");
-            RESTART
+            Err(LoopControl::Restart)
         }
     }
 }
